@@ -1,0 +1,8 @@
+# Don't checkin this output dir
+Release/
+# don't check in the folder where VM files are stored
+.kitchen/
+# don't check in the local files
+*local*
+# The *.my.* files are mine
+*.my.*
