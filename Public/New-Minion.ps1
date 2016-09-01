@@ -141,7 +141,7 @@ function New-Minion {
         $MinionData.STOP_ACTIONS.Foreach{ [ScriptBlock]::Create($_).Invoke() }
     }.ToString()
 
-    $MinionJobParams = [PSCustomObject]@{
+    [PSCustomObject][ordered]@{
         PSTypeName           = 'PSMinions.MinionWorker'
         MinionID             = $MinionID
         MinionWorker         = $MinionWorker
@@ -154,14 +154,10 @@ function New-Minion {
         LoopActions          = $LoopActions
         StopConditions       = $StopConditions
         StopActions          = $StopActions
-    }
-    $MinionJobParams | Add-Member -MemberType ScriptMethod -Name StartAsJob -Value {
-        #$StartJobParams = $this.psobject.ImmediateBaseObject
+    } | Add-Member -Name StartAsJob -MemberType ScriptMethod -PassThru -Value {
         $scriptblock = [scriptblock]::Create($this.MinionWorker)
         Start-Job -ScriptBlock $scriptblock -Name $this.MinionID -ArgumentList $this
-     }
-    $MinionJobParams | Add-Member -MemberType ScriptMethod -Name Run -Value {
+    }| Add-Member -Name Run -MemberType ScriptMethod -PassThru -Value {
         [scriptblock]::Create($this.MinionWorker).invoke($this)
     }
-    return $MinionJobParams
 }
