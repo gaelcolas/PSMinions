@@ -98,16 +98,15 @@ Describe 'New-Minion' {
         }
 
         it 'Run the Minion worker after JSON Serialization/de-serialization' {
-        
+            $deserializedMinion = ($Minion | ConvertTo-Json | ConvertFrom-Json)
+            ,[scriptblock]::Create($deserializedMinion.MinionWorker).Invoke($deserializedMinion)  | Should match 'Interface writing to output'
         }
     }
 }
 
-
-
 break
 
-
+#below are further ideas for tests (dual interface on different 'thread')
 $InterfaceDefinition = @([PSCustomObject][Ordered]@{
     'InterfaceConstructor' = {Start-Job -Name 'IF01' -ScriptBlock {$a = 1; do { Write-Host "a = $a"; Start-Sleep -Seconds 1; $a+=1} while ($a -le 5); Write-Host "Closing Interface"; sleep -seconds 5; }}.ToString()
     'Name' = 'IF01'
