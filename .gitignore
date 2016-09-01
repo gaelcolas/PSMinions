@@ -6,3 +6,5 @@ Release/
 *local*
 # The *.my.* files are mine
 *.my.*
+#don't check in vscode files
+.vscode/
