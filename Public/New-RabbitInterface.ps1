@@ -151,27 +151,3 @@ Function New-RabbitInterface {
         [scriptblock]::Create($this.InterfaceConstructor).Invoke()
     }
 }
-
-break
-#$gues = (get-Credential)
-$definition = [PSCustomObject][ordered]@{
-                    'ComputerName' = '10.111.111.116'
-                    'interfaceId' = (New-Guid)
-                    'InterfaceName' = 'COMSInterface'
-                    'prefetchSize' = 0
-                    'prefetchCount' =1
-                    'global' = $false
-                    'key' = @('#','role1.MULTICAST','BROADCAST') #the queuename will be appended if the last char is a . or if empty
-                    'exchange' = 'WORK'
-                    'QueueName' = 'workqueue'
-                    'autodelete' = $false
-                    'requireack' = $true
-                    'durable' = $True
-                    'ActionFile' = 'C:\src\psMinions\MinionComsInterface.ps1'
-                    'RabbitMQCredential' = $gues
-                } | New-RabbitInterface
-
-#$iface = [scriptblock]::Create($definition.InterfaceConstructor).Invoke($definition)
-#$iface | Wait-Job | Receive-Job
-#
-#$iface | Remove-Job

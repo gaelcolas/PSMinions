@@ -1,11 +1,10 @@
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path 
-$sut = (Split-Path -Leaf $MyInvocation.MyCommand.Path) -replace '\.Tests\.', '.' 
+$sut  = (Split-Path -Leaf $MyInvocation.MyCommand.Path) -replace '\.Tests\.', '.'  
 . "$here\..\..\Public\$sut"
 
+Describe -Verbose 'New-RabbitInterface' {
 
-Describe 'New-RabbitInterface' {
-
-    Context 'New-RabbitInterface Called without Parameter returned object' {
+    Context -Verbose 'New-RabbitInterface Called without Parameter returned object' {
         $RabbitInterface = New-RabbitInterface -ea SilentlyContinue
 
         It 'does not error generating a default RabbitInterface' {
@@ -56,9 +55,9 @@ Describe 'New-RabbitInterface' {
         }
 
         It 'has a property key of type [string[]] defaulting to @("#")' {
-            $RabbitInterface.key | Should not BeNullOrEmpty
-            ,$RabbitInterface.key | Should BeOfType [string[]]
-            ,$RabbitInterface.key | Should be @("#")
+            $RabbitInterface.key  | Should not BeNullOrEmpty
+            ,$RabbitInterface.key  | Should BeOfType [string[]]
+            ,$RabbitInterface.key | Should match '#'
         }
 
         It 'has a property Exchange of type [string] defaulting to "celery"' {
@@ -105,10 +104,31 @@ Describe 'New-RabbitInterface' {
             $RabbitInterface.IncludeEnvelope | Should be $false
         }
     }
-
-    Context 'Creating Custom RabbitInterface' {
-        It 'Should do something' -pending {
-            $true | should be $true 
-        } 
-    }
 }
+
+<#
+break
+#$gues = (get-Credential)
+$definition = [PSCustomObject][ordered]@{
+                    'ComputerName' = '10.111.111.116'
+                    'interfaceId' = (New-Guid)
+                    'InterfaceName' = 'COMSInterface'
+                    'prefetchSize' = 0
+                    'prefetchCount' =1
+                    'global' = $false
+                    'key' = @('#','role1.MULTICAST','BROADCAST') #the queuename will be appended if the last char is a . or if empty
+                    'exchange' = 'WORK'
+                    'QueueName' = 'workqueue'
+                    'autodelete' = $false
+                    'requireack' = $true
+                    'durable' = $True
+                    'ActionFile' = 'C:\src\psMinions\MinionComsInterface.ps1'
+                    'RabbitMQCredential' = $gues
+                } | New-RabbitInterface
+
+#$iface = [scriptblock]::Create($definition.InterfaceConstructor).Invoke($definition)
+#$iface | Wait-Job | Receive-Job
+#
+#$iface | Remove-Job
+
+#>
