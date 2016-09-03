@@ -48,7 +48,7 @@ Function New-RabbitInterface {
         [System.IO.FileInfo]
         $ActionFile,
         [Parameter(ValueFromPipelineByPropertyName = $true)]
-        [PSCredential]
+        [pscredential]
         $RabbitMQCredential,
         [Parameter(ValueFromPipelineByPropertyName = $true)]
         [switch]
@@ -77,7 +77,13 @@ Function New-RabbitInterface {
         'Durable'           { $RMQParams['Durable'] = [bool]$Parameters.'Durable'}
         #'ActionScriptBlock' { $RMQParams['ActionScriptBlock'] = $Parameters['ActionScriptBlock']}
         'ActionFile'        { $ActionFile = $Parameters.'ActionFile'.FullName}
-        'RabbitMQCredential'{ $RMQParams['Credential'] = [PSCredential]$Parameters.'RabbitMQCredential'}
+        'RabbitMQCredential'{   if (!$Parameters.RabbitMQCredential) { continue }
+                                $PlainPassword = $Parameters.RabbitMQCredential.password
+                                $SecurePassword = $PlainPassword | ConvertTo-SecureString -AsPlainText -Force
+                                $UserName =  $Parameters.RabbitMQCredential.username
+                                $RMQParams['Credential'] = New-Object System.Management.Automation.PSCredential `
+                                     -ArgumentList $UserName, $SecurePassword
+                            }
         'IncludeEnvelope'   { $RMQParams['IncludeEnvelope'] = [bool]$Parameters.'IncludeEnvelope'}
         }
 
@@ -128,6 +134,16 @@ Function New-RabbitInterface {
         return Register-RabbitMqEvent @RMQParams
     }.ToString()
 
+    if ($RabbitMQCredential)
+    {
+       $RMQCredential = ([PSCustomObject]@{
+                                    PSTypeName = 'Json.Serializable.unsecure.Credentials'
+                                    'username' = $RabbitMQCredential.UserName
+                                    'password' = $RabbitMQCredential.GetNetworkCredential().Password
+                             })
+    }
+    
+
      return [PSCustomObject][Ordered]@{
         PSTypeName             = 'PSMinions.RabbitInterface'
         'RabbitMQServer'       = $RabbitMQServer
@@ -145,9 +161,9 @@ Function New-RabbitInterface {
         'Durable'              = [bool]$Durable
         'ActionScriptBlock'    = $ActionScriptBlock
         'ActionFile'           = $ActionFile.FullName
-        'RabbitMQCredential'   = $RabbitMQCredential
+        'RabbitMQCredential'   = $RMQCredential
         'IncludeEnvelope'      = [bool]$IncludeEnvelope
     } | Add-Member -Name Start -MemberType ScriptMethod -PassThru -Value {
-        [scriptblock]::Create($this.InterfaceConstructor).Invoke()
+        [scriptblock]::create($this.InterfaceConstructor).Invoke($this)
     }
 }

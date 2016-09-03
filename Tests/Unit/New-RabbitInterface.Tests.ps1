@@ -2,9 +2,21 @@ $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $sut  = (Split-Path -Leaf $MyInvocation.MyCommand.Path) -replace '\.Tests\.', '.'  
 . "$here\..\..\Public\$sut"
 
-Describe -Verbose 'New-RabbitInterface' {
+if (!$RabbitMQServer)
+{
+    $RabbitMQServer = 'localhost'
+}
+if ($RabbitMQCredential)
+{
+    $PlainPassword          = "guest"
+    $UserName               = "guest"
+    $SecurePassword         = $PlainPassword | ConvertTo-SecureString -AsPlainText -Force
+    $RabbitMQCredential = (New-Object System.Management.Automation.PSCredential -ArgumentList $UserName,$SecurePassword)
+}
 
-    Context -Verbose 'New-RabbitInterface Called without Parameter returned object' {
+Describe 'New-RabbitInterface' {
+
+    Context 'New-RabbitInterface Called without Parameter returned object' {
         $RabbitInterface = New-RabbitInterface -ea SilentlyContinue
 
         It 'does not error generating a default RabbitInterface' {
@@ -103,6 +115,43 @@ Describe -Verbose 'New-RabbitInterface' {
             $RabbitInterface.IncludeEnvelope | Should BeOfType [bool]
             $RabbitInterface.IncludeEnvelope | Should be $false
         }
+
+        It 'Tries to create the Interface but fails as PSRabbitMQ is not imported yet' {
+            Remove-Module -Force PSRabbitMq -ErrorAction SilentlyContinue
+            { $RabbitInterface.Start() } | Should Throw "The term 'Register-RabbitMqEvent' is not recognized as the name of a cmdlet"
+        }
+    }
+
+    Context 'New-RabbitInterface with specific handling' {
+
+    Import-Module PSRabbitMQ -Force
+    Mock -CommandName Register-RabbitMqEvent -MockWith { return $true}
+
+        $RabbitInterfaceParams = [pscustomobject]@{
+                'RabbitMQServer'       = $RabbitMQServer
+                'InterfaceId'          = '4eff5f57-1df9-4bb7-b004-eb8f8ab9ef24'
+                'InterfaceName'        = '4eff5f57-1df9-4bb7-b004-eb8f8ab9ef24'
+                'PrefetchSize'         = 0
+                'PrefetchCount'        = 1
+                'global'               = $false
+                'key'                  = @('#','role1.MULTICAST','BROADCAST')
+                'Exchange'             = 'WORK'
+                'QueueName'            = 'workqueue'
+                'Autodelete'           = $false
+                'RequireAck'           = $true
+                'Durable'              = $true
+                'RabbitMQCredential'   = $RabbitMQCredential
+                'IncludeEnvelope'      = $false
+                }
+        It 'ensure the object can be created piping byPropertyName' {
+            { $RabbitInterfaceParams | New-RabbitInterface -ErrorAction Stop} | Should not Throw
+        }
+
+        It 'Starting interface should return true with mocked register-rabbitmqevent' {
+             ($RabbitInterfaceParams | New-RabbitInterface).Start() | Should be $true
+        }
+
+        
     }
 }
 
