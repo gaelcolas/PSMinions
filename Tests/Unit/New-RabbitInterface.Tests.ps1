@@ -6,7 +6,7 @@ if (!$RabbitMQServer)
 {
     $RabbitMQServer = 'localhost'
 }
-if ($RabbitMQCredential)
+if (!$RabbitMQCredential)
 {
     $PlainPassword          = "guest"
     $UserName               = "guest"
@@ -124,8 +124,23 @@ Describe 'New-RabbitInterface' {
 
     Context 'New-RabbitInterface with specific handling' {
 
-    Import-Module PSRabbitMQ -Force
-    Mock -CommandName Register-RabbitMqEvent -MockWith { return $true}
+        Import-Module PSRabbitMQ -Force
+        Mock -CommandName Register-RabbitMqEvent -MockWith { 
+            return [PsCustomObject]@{
+            'ComputerName'      = $ComputerName
+            'PrefetchSize'      = $PrefetchSize
+            'PrefetchCount'     = $PrefetchCount
+            'global'            = $global
+            'key'               = $key
+            'Exchange'          = $Exchange
+            'QueueName'         = $QueueName
+            'AutoDelete'        = $AutoDelete
+            'RequireAck'        = $RequireAck
+            'Durable'           = $Durable
+            'Action'            = $Action
+            'Credential'        = $RabbitMQCredential
+            }
+        }
 
         $RabbitInterfaceParams = [pscustomobject]@{
                 'RabbitMQServer'       = $RabbitMQServer
@@ -143,14 +158,26 @@ Describe 'New-RabbitInterface' {
                 'RabbitMQCredential'   = $RabbitMQCredential
                 'IncludeEnvelope'      = $false
                 }
+
         It 'ensure the object can be created piping byPropertyName' {
             { $RabbitInterfaceParams | New-RabbitInterface -ErrorAction Stop} | Should not Throw
         }
 
-        It 'Starting interface should return true with mocked register-rabbitmqevent' {
-             ($RabbitInterfaceParams | New-RabbitInterface).Start() | Should be $true
-        }
+        It 'Starting interface should pass correct parameters to register-rabbitmqevent' {
+                $PassedParams = ($RabbitInterfaceParams | New-RabbitInterface).Start()
 
+                $PassedParams.ComputerName  | Should be $RabbitInterfaceParams.RabbitMQServer
+                $PassedParams.PrefetchSize  | Should be $RabbitInterfaceParams.PrefetchSize
+                $PassedParams.PrefetchCount | Should be $RabbitInterfaceParams.PrefetchCount
+                $PassedParams.global        | Should be $RabbitInterfaceParams.global
+                $PassedParams.queueName     | Should be $RabbitInterfaceParams.QueueName
+                $PassedParams.Autodelete    | Should be $RabbitInterfaceParams.Autodelete
+                $PassedParams.RequireAck    | Should be $RabbitInterfaceParams.RequireAck
+                $PassedParams.Durable       | Should be $RabbitInterfaceParams.durable
+                $PassedParams.Action        | Should Not BeNullOrEmpty
+                $PassedParams.Credential    | Should be $RabbitInterfaceParams.RabbitMQCredential
+        }
+            
         
     }
 }
