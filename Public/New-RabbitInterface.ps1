@@ -1,6 +1,6 @@
 ﻿
 Function New-RabbitInterface {
-    [cmdletBinding(DefaultParameterSetName='ActionFile')]
+    [cmdletBinding()]
     [OutputType([PSCustomObject])]
     Param (
         [Parameter(ValueFromPipelineByPropertyName = $true)]
@@ -13,7 +13,7 @@ Function New-RabbitInterface {
         $RabbitMQServer = 'localhost',
         [Parameter(ValueFromPipelineByPropertyName = $true)]
         [string]
-        $InterfaceName = $InterfaceID.ToString(),
+        $InterfaceName = ($InterfaceID),
         [Parameter(ValueFromPipelineByPropertyName = $true)]
         [uint32]
         $PrefetchSize = 0,
@@ -31,7 +31,7 @@ Function New-RabbitInterface {
         $Exchange = 'celery',
         [Parameter(ValueFromPipelineByPropertyName = $true)]
         [string]
-        $QueueName = 'celery',
+        $QueueName = $InterfaceID,
         [Parameter(ValueFromPipelineByPropertyName = $true)]
         [switch]
         $AutoDelete,
@@ -43,7 +43,11 @@ Function New-RabbitInterface {
         $Durable,
         [Parameter(ParameterSetName = 'ActionScriptBlock',ValueFromPipelineByPropertyName = $true)]
         [String]
-        $ActionScriptBlock,
+        $ActionScriptBlock = ("Register-EngineEvent -SourceIdentifier MINION -Forward;`
+                                `$null = New-Event -SourceIdentifier MINION -MessageData ([PSCustomObject]@{`
+                                    'message' = `$_;`
+                                    'interfaceid' = '$InterfaceID';`
+                                })"),
         [Parameter(ParameterSetName = 'ActionFile',ValueFromPipelineByPropertyName = $true)]
         [System.IO.FileInfo]
         $ActionFile,
@@ -55,6 +59,15 @@ Function New-RabbitInterface {
         $IncludeEnvelope
     )
 
+    if (!$PSBoundParameters.keys.Contains('InterfaceName'))
+    {
+        $InterfaceName = $InterfaceId
+    }
+    if (!$PSBoundParameters.keys.Contains('QueueName'))
+    {
+        $QueueName = $InterfaceId
+    }
+
     $InterfaceConstructor = {
         Param (
             [PSCustomObject]
@@ -64,19 +77,27 @@ Function New-RabbitInterface {
 
         switch (($Parameters|Get-Member -MemberType NoteProperty).Name)
         {
-        'RabbitMQServer'    { $RMQParams['ComputerName'] = [string]$Parameters.'RabbitMQServer'}
-        'InterfaceId'       { $InterfaceId = $Parameters['InterfaceId']}
-        'PrefetchSize'      { $RMQParams['PrefetchSize'] = [uint32]$Parameters.'PrefetchSize'}
-        'PrefetchCount'     { $RMQParams['PrefetchCount'] = [uint16]$Parameters.'PrefetchCount'}
-        'global'            { $RMQParams['global'] = [bool]$Parameters.global}
-        'key'               { $RMQParams['key'] = [string[]]$Parameters.'key'}
-        'Exchange'          { $RMQParams['Exchange'] = [string]$Parameters.'Exchange'}
-        'QueueName'         { $RMQParams['QueueName'] = [string]$Parameters.'QueueName'}
-        'AutoDelete'        { $RMQParams['AutoDelete'] = [bool]$Parameters.'AutoDelete'}
-        'RequireAck'        { $RMQParams['RequireAck'] = [bool]$Parameters.'RequireAck'}
-        'Durable'           { $RMQParams['Durable'] = [bool]$Parameters.'Durable'}
-        #'ActionScriptBlock' { $RMQParams['ActionScriptBlock'] = $Parameters['ActionScriptBlock']}
-        'ActionFile'        { $ActionFile = $Parameters.'ActionFile'.FullName}
+        'RabbitMQServer'    { $RMQParams['ComputerName']  = [string]$Parameters.'RabbitMQServer'}
+        'InterfaceId'       { $InterfaceId                = [string]$Parameters.'InterfaceId';  }
+        'Interfacename'     { $InterfaceName              = [string]$Parameters.'Interfacename';        }
+        'PrefetchSize'      { $RMQParams['PrefetchSize']  = [uint32]$Parameters.'PrefetchSize'  }
+        'PrefetchCount'     { $RMQParams['PrefetchCount'] = [uint16]$Parameters.'PrefetchCount' }
+        'global'            { $RMQParams['global']        = [bool]$Parameters.global            }
+        'key'               { $RMQParams['key']           = [string[]]$Parameters.'key'         } 
+        'Exchange'          { $RMQParams['Exchange']      = [string]$Parameters.'Exchange'      }
+        'QueueName'         { $RMQParams['QueueName']     = [string]$Parameters.'QueueName'     }
+        'AutoDelete'        { $RMQParams['AutoDelete']    = [bool]$Parameters.'AutoDelete'      }
+        'RequireAck'        { $RMQParams['RequireAck']    = [bool]$Parameters.'RequireAck'      }
+        'Durable'           { $RMQParams['Durable']       = [bool]$Parameters.'Durable'         }
+        'ActionScriptBlock' {
+                                 if (!( $ActionScriptBlock = $Parameters.ActionScriptBlock))
+                                 {
+                                    Write-Verbose "No scriptblock defined for event action."
+                                 }
+                            }
+        'ActionFile'        {   if (!($ActionFile = [string]$Parameters.ActionFile) )
+                                { Write-Verbose "No file defined for event action." }
+                            }
         'RabbitMQCredential'{   if (!$Parameters.RabbitMQCredential) { continue }
                                 $PlainPassword = $Parameters.RabbitMQCredential.password
                                 $SecurePassword = $PlainPassword | ConvertTo-SecureString -AsPlainText -Force
@@ -93,6 +114,7 @@ Function New-RabbitInterface {
         }
         
         #If a Key ends by . or is null/empty, replace by 'unchangedpart.<InterfaceID>' or '<interfaceID>'
+        Write-Verbose "Processing the Keys to add $InterfaceID where needed"
         if (-not $RMQParams['key']) 
         {
             $RMQParams['key'] = @($InterfaceId) 
@@ -100,15 +122,22 @@ Function New-RabbitInterface {
         else
         {
             $routing_key = switch -regex ($RMQParams['key'] ) {
-                    "\.$"   { $_ + $InterfaceId }
-                    "^$"      { $InterfaceId }
-                    Default { $_ }
+                    "\.$"   {
+                                Write-Verbose "Appending the InterfaceID to $_"
+                                $_ + $InterfaceId 
+                             }
+                    "^$"     {
+                                Write-Verbose "Replacing with $InterfaceID"
+                                $InterfaceId 
+                             }
+                    Default {Write-verbose "Key $_ unchanged"; $_ }
                 }
             $RMQParams['key'] = $routing_key
         }
         
-
-        $RMQParams['Action'] = [scriptblock]::Create("
+        if ($ActionFile)
+        {
+            $RMQParams['Action'] = [scriptblock]::Create("
                     Register-EngineEvent -SourceIdentifier MINION -Forward;
                     Function Invoke-MinionAction {
                         param(
@@ -125,11 +154,19 @@ Function New-RabbitInterface {
                         })
                     }
                     #Processing Starts
-                    Invoke-MinionAction -action { Set-MinionDataProperty -PropertyName 'LastMessage' -Value (Get-Date); }
+                    Invoke-MinionAction -action { 
+                                Set-MinionDataProperty -PropertyName 'LastMessage' -Value (Get-Date); 
+                                }
                     #Write-Verbose `$_
                     #Write-Verbose $InterfaceID
                     & '$ActionFile' `$_ '`$Miniondata.minionID' '$InterfaceId' 
                     ")
+        }
+        elseif ($ActionScriptBlock)
+        {
+            $RMQParams['Action'] = [scriptblock]::Create($ActionScriptBlock)
+        }
+        
 
         return Register-RabbitMqEvent @RMQParams
     }.ToString()

@@ -81,7 +81,7 @@ Describe 'New-RabbitInterface' {
         It 'has a property QueueName of type [string] defaulting to celery' {
             $RabbitInterface.QueueName | Should not BeNullOrEmpty
             $RabbitInterface.QueueName | Should BeOfType [string]
-            $RabbitInterface.QueueName | Should be 'celery'
+            $RabbitInterface.QueueName.Length | Should be 36
         }
 
         It 'has a property Autodelete of type [bool] defaulting to false' {
@@ -103,7 +103,8 @@ Describe 'New-RabbitInterface' {
         }
 
         It 'has a property ActionScriptblock defaulting to null' {
-            $RabbitInterface.ActionScriptblock | Should BeNullOrEmpty
+            $RabbitInterface.ActionScriptblock | Should Not BeNullOrEmpty
+            $RabbitInterface.ActionScriptblock | SHould belike "Register-EngineEvent -SourceIdentifier MINION -Forward;*"
         }
 
         It 'has a property ActionFile defaulting to null' {
@@ -126,20 +127,7 @@ Describe 'New-RabbitInterface' {
 
         Import-Module PSRabbitMQ -Force
         Mock -CommandName Register-RabbitMqEvent -MockWith { 
-            return [PsCustomObject]@{
-            'ComputerName'      = $ComputerName
-            'PrefetchSize'      = $PrefetchSize
-            'PrefetchCount'     = $PrefetchCount
-            'global'            = $global
-            'key'               = $key
-            'Exchange'          = $Exchange
-            'QueueName'         = $QueueName
-            'AutoDelete'        = $AutoDelete
-            'RequireAck'        = $RequireAck
-            'Durable'           = $Durable
-            'Action'            = $Action
-            'Credential'        = $RabbitMQCredential
-            }
+            return $BoundParameters
         }
 
         $RabbitInterfaceParams = [pscustomobject]@{
@@ -166,19 +154,20 @@ Describe 'New-RabbitInterface' {
         It 'Starting interface should pass correct parameters to register-rabbitmqevent' {
                 $PassedParams = ($RabbitInterfaceParams | New-RabbitInterface).Start()
 
-                $PassedParams.ComputerName  | Should be $RabbitInterfaceParams.RabbitMQServer
-                $PassedParams.PrefetchSize  | Should be $RabbitInterfaceParams.PrefetchSize
-                $PassedParams.PrefetchCount | Should be $RabbitInterfaceParams.PrefetchCount
-                $PassedParams.global        | Should be $RabbitInterfaceParams.global
-                $PassedParams.queueName     | Should be $RabbitInterfaceParams.QueueName
-                $PassedParams.Autodelete    | Should be $RabbitInterfaceParams.Autodelete
-                $PassedParams.RequireAck    | Should be $RabbitInterfaceParams.RequireAck
-                $PassedParams.Durable       | Should be $RabbitInterfaceParams.durable
-                $PassedParams.Action        | Should Not BeNullOrEmpty
-                $PassedParams.Credential    | Should be $RabbitInterfaceParams.RabbitMQCredential
+                $PassedParams.ComputerName             | Should be $RabbitInterfaceParams.RabbitMQServer
+                $PassedParams.prefetchSize             | Should be $RabbitInterfaceParams.PrefetchSize
+                $PassedParams.prefetchCount            | Should be $RabbitInterfaceParams.PrefetchCount
+                $PassedParams.global                   | Should be $RabbitInterfaceParams.global
+                $PassedParams.QueueName                | Should be $RabbitInterfaceParams.QueueName
+                $PassedParams.AutoDelete               | Should be $RabbitInterfaceParams.Autodelete
+                $PassedParams.RequireAck               | Should be $RabbitInterfaceParams.RequireAck
+                $PassedParams.Durable                  | Should be $RabbitInterfaceParams.durable
+                $PassedParams.Key                      | Should Not BeNullOrEmpty
+                $PassedParams.Action                   | Should Not BeNullOrEmpty
+                $PassedParams.Credential.Username      | Should be $RabbitInterfaceParams.RabbitMQCredential.UserName
+                $PassedParams.IncludeEnvelope          | Should be $false
         }
-            
-        
+
     }
 }
 
