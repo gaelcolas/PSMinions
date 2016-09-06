@@ -21,22 +21,6 @@ $RMQServer = @{
 $RMQObjectConfiguration = [PSCustomObject]@{
     'exchanges' = @(
         [PSCustomObject][ordered]@{
-            'name' = 'WORK'
-            'vhost' = '/'
-            'type' = 'topic' #direct,fanout,headers
-            'durable' = $true
-            'AutoDelete' = $false
-            'internal'=$false
-        },
-        [PSCustomObject][ordered]@{
-            'Name' = 'COMS'
-            'vhost' = '/'
-            'type' = 'topic' #direct,fanout,headers
-            'durable' = $true
-            'AutoDelete' = $false
-            'internal'=$false
-        },
-        [PSCustomObject][ordered]@{
             'Name' = 'PINGPONG'
             'vhost' = '/'
             'type' = 'topic' #direct,fanout,headers
@@ -46,34 +30,8 @@ $RMQObjectConfiguration = [PSCustomObject]@{
         }
     )
     'queues' = @(
-        [PSCustomObject][ordered]@{
-            'name'=  'workqueue'
-            'vhost'=  '/'
-            'durable'=  $true
-            'auto_delete'=  $false #delete the queue when not subscribed
-            },
-            [PSCustomObject][ordered]@{
-            'name'=  'pingpong'
-            'vhost'=  '/'
-            'durable'=  $true
-            'auto_delete'=  $false #delete the queue when not subscribed
-            }
     )
     'bindings' = @(
-        [PSCustomObject][ordered]@{
-            'source'=  'WORK'
-            'vhost'=  '/'
-            'destination'=  'workqueue'
-            'destination_type'=  'queue'
-            'routing_key'=  '*'
-        },
-        [PSCustomObject][ordered]@{
-            'source'=  'PINGPONG'
-            'vhost'=  '/'
-            'destination'=  'pingpong'
-            'destination_type'=  'queue'
-            'routing_key'=  '*'
-        }
     )
 }
 
@@ -124,27 +82,3 @@ Describe 'Ensure the RabbitMQ is setup for integration Tests' {
 }
  
 
-
-
-<#
-$if = [PSCustomObject][ordered]@{
-                    'name' = 'COMSInterface'
-                    'InterfaceID' = '18a3fd00-bfeb-4a94-9aa8-b74ab3270511'
-                    'prefetchSize' = 0
-                    'prefetchCount' =5
-                    'global' = $false
-                    'key' = @('','role1.MULTICAST','BROADCAST') #the queuename will be appended if the last char is a . or if empty
-                    'exchange' = 'COMS'
-                    'autodelete' = $true
-                    'requireack' = $false
-                    'durable' = $True
-                    #'actionfile' = 'C:\src\psMinions\MinionComsInterface.ps1'
-                    'RabbitMQCredential' = $RabbitMQCredential
-                    'ComputerName' = $RabbitMQServer
-                } | New-RabbitInterface
-
-$job = $if.Start()
-Register-EngineEvent -SourceIdentifier MINION -Action { $event | ConvertTo-Json | Write-Host }
-Send-RabbitMqMessage -SerializeAs application/json -Exchange COMS -Key '18a3fd00-bfeb-4a94-9aa8-b74ab3270511' -InputObject 'Hello 1 WORK!' -ComputerName 10.111.111.116
-
-#>
