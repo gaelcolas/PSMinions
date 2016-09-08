@@ -1,5 +1,8 @@
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path 
-#this is still a draft
+#this Test creates an Exchange, and a RabbitInterface
+# the Interface is set to reply to PING messages with PONG, 
+#  targeted (routed via key) to every queue binded to exchange PINGPONG 
+# then waits for a single message on a 
 
 if (!$RabbitMQServer)
 {
@@ -36,7 +39,7 @@ $RMQObjectConfiguration = [PSCustomObject]@{
 }
 
 Describe 'Ensure the RabbitMQ is setup for integration Tests' {
-    Import-Module RabbitMQTools,PSRabbitMQ
+    Import-Module RabbitMQTools,PSRabbitMQ -Force
     $RMQObjectConfiguration.Exchanges | Add-RabbitMQExchange @RMQServer
     $RMQObjectConfiguration.queues | Add-RabbitMQQueue @RMQServer
     $RMQObjectConfiguration.bindings | Add-RabbitMQQueueBinding @RMQServer
@@ -54,14 +57,14 @@ Describe 'Ensure the RabbitMQ is setup for integration Tests' {
                     'requireack' = $true
                     'durable' = $True
                     #'actionfile' = 'C:\src\psMinions\MinionComsInterface.ps1'
-                    'actionScriptBlock' = " Write-host 'Sending message to PINGPONG: `$_'`
+                    'actionScriptBlock' = "ipmo PSRabbitMq; Write-host 'Sending message to PINGPONG: `$_'`
                                             Send-RabbitMqMessage -ComputerName $RabbitMQServer -Exchange PINGPONG -Key 'PONG.MULTICAST' -InputObject ('PONG')`
                                            "
                     'RabbitMQCredential' = $RabbitMQCredential
                     'ComputerName' = $RabbitMQServer
                 } | New-RabbitInterface
         $PingListenerJob = $PingListernerInterface.Start()
-        $PongListenerJob = Start-Job -ScriptBlock { Wait-RabbitMqMessage -ComputerName $using:RabbitMQServer -Exchange PINGPONG -QueueName (New-guid) -Timeout 6 -Key 'PONG.MULTICAST' -AutoDelete $true}
+        $PongListenerJob = Start-Job -ScriptBlock { Import-Module PSRabbitMQ; Wait-RabbitMqMessage -ComputerName $using:RabbitMQServer -Exchange PINGPONG -QueueName (New-guid) -Timeout 6 -Key 'PONG.MULTICAST' -AutoDelete $true}
         while ($PongListenerJob.State -notin 'failed','running','completed') { Sleep -seconds 1 -Verbose }
         
         do {

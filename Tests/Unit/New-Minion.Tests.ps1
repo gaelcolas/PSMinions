@@ -104,7 +104,8 @@ Describe 'New-Minion' {
     }
 }
 
-break
+<#
+return
 
 #below are further ideas for tests (dual interface on different 'thread')
 $InterfaceDefinition = @([PSCustomObject][Ordered]@{
@@ -122,3 +123,5 @@ $a.run()
 
 
 Get-Job
+
+#>
