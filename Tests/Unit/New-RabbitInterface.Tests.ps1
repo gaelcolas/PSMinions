@@ -117,10 +117,6 @@ Describe 'New-RabbitInterface' {
             $RabbitInterface.IncludeEnvelope | Should be $false
         }
 
-        It 'Tries to create the Interface but fails as PSRabbitMQ is not imported yet' {
-            Remove-Module -Force PSRabbitMq -ErrorAction SilentlyContinue
-            { $RabbitInterface.Start() } | Should Throw "The term 'Register-RabbitMqEvent' is not recognized as the name of a cmdlet"
-        }
     }
 
     Context 'New-RabbitInterface with specific handling' {

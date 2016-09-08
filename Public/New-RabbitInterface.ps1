@@ -1,46 +1,83 @@
 ﻿
 Function New-RabbitInterface {
-    [cmdletBinding()]
+    [cmdletBinding(DefaultParameterSetName = 'Default')]
     [OutputType([PSCustomObject])]
     Param (
-        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [Parameter(ValueFromPipelineByPropertyName = $true, ParameterSetName = 'Default')]
+        [Parameter(ParameterSetName = 'ActionFile',ValueFromPipelineByPropertyName = $true)]
+        [Parameter(ParameterSetName = 'ActionScriptBlock',ValueFromPipelineByPropertyName = $true)]
         [Guid]
         [ValidateNotNullOrEmpty()]
         $InterfaceId = (New-Guid),
-        [Parameter(ValueFromPipelineByPropertyName = $true)]
+
+        [Parameter(ValueFromPipelineByPropertyName = $true, ParameterSetName = 'Default')]
+        [Parameter(ParameterSetName = 'ActionFile',ValueFromPipelineByPropertyName = $true)]
+        [Parameter(ParameterSetName = 'ActionScriptBlock',ValueFromPipelineByPropertyName = $true)]
         [Alias('ComputerName')]
         [String]
         $RabbitMQServer = 'localhost',
-        [Parameter(ValueFromPipelineByPropertyName = $true)]
+
+        [Parameter(ValueFromPipelineByPropertyName = $true, ParameterSetName = 'Default')]
+        [Parameter(ParameterSetName = 'ActionFile',ValueFromPipelineByPropertyName = $true)]
+        [Parameter(ParameterSetName = 'ActionScriptBlock',ValueFromPipelineByPropertyName = $true)]
         [string]
         $InterfaceName = ($InterfaceID),
-        [Parameter(ValueFromPipelineByPropertyName = $true)]
+
+        [Parameter(ValueFromPipelineByPropertyName = $true, ParameterSetName = 'Default')]
+        [Parameter(ParameterSetName = 'ActionFile',ValueFromPipelineByPropertyName = $true)]
+        [Parameter(ParameterSetName = 'ActionScriptBlock',ValueFromPipelineByPropertyName = $true)]
         [uint32]
         $PrefetchSize = 0,
-        [Parameter(ValueFromPipelineByPropertyName = $true)]
+
+        [Parameter(ValueFromPipelineByPropertyName = $true, ParameterSetName = 'Default')]
+        [Parameter(ParameterSetName = 'ActionFile',ValueFromPipelineByPropertyName = $true)]
+        [Parameter(ParameterSetName = 'ActionScriptBlock',ValueFromPipelineByPropertyName = $true)]
         [uint16]
         $PrefetchCount = 1,
-        [Parameter(ValueFromPipelineByPropertyName = $true)]
+
+        [Parameter(ValueFromPipelineByPropertyName = $true, ParameterSetName = 'Default')]
+        [Parameter(ParameterSetName = 'ActionFile',ValueFromPipelineByPropertyName = $true)]
+        [Parameter(ParameterSetName = 'ActionScriptBlock',ValueFromPipelineByPropertyName = $true)]
         [switch]
         $global,
-        [Parameter(ValueFromPipelineByPropertyName = $true)]
+
+        [Parameter(ValueFromPipelineByPropertyName = $true, ParameterSetName = 'Default')]
+        [Parameter(ParameterSetName = 'ActionFile',ValueFromPipelineByPropertyName = $true)]
+        [Parameter(ParameterSetName = 'ActionScriptBlock',ValueFromPipelineByPropertyName = $true)]
         [string[]]
         $key = @('#'),
-        [Parameter(ValueFromPipelineByPropertyName = $true)]
+
+        [Parameter(ValueFromPipelineByPropertyName = $true, ParameterSetName = 'Default')]
+        [Parameter(ParameterSetName = 'ActionFile',ValueFromPipelineByPropertyName = $true)]
+        [Parameter(ParameterSetName = 'ActionScriptBlock',ValueFromPipelineByPropertyName = $true)]
         [string]
         $Exchange = 'celery',
-        [Parameter(ValueFromPipelineByPropertyName = $true)]
+
+        [Parameter(ValueFromPipelineByPropertyName = $true, ParameterSetName = 'Default')]
+        [Parameter(ParameterSetName = 'ActionFile',ValueFromPipelineByPropertyName = $true)]
+        [Parameter(ParameterSetName = 'ActionScriptBlock',ValueFromPipelineByPropertyName = $true)]
         [string]
         $QueueName = $InterfaceID,
-        [Parameter(ValueFromPipelineByPropertyName = $true)]
+
+        [Parameter(ValueFromPipelineByPropertyName = $true, ParameterSetName = 'Default')]
+        [Parameter(ParameterSetName = 'ActionFile',ValueFromPipelineByPropertyName = $true)]
+        [Parameter(ParameterSetName = 'ActionScriptBlock',ValueFromPipelineByPropertyName = $true)]
         [switch]
         $AutoDelete,
-        [Parameter(ValueFromPipelineByPropertyName = $true)]
+
+        [Parameter(ValueFromPipelineByPropertyName = $true, ParameterSetName = 'Default')]
+        [Parameter(ParameterSetName = 'ActionFile',ValueFromPipelineByPropertyName = $true)]
+        [Parameter(ParameterSetName = 'ActionScriptBlock',ValueFromPipelineByPropertyName = $true)]
         [switch]
         $RequireAck,
-        [Parameter(ValueFromPipelineByPropertyName = $true)]
+
+        [Parameter(ValueFromPipelineByPropertyName = $true, ParameterSetName = 'Default')]
+        [Parameter(ParameterSetName = 'ActionFile',ValueFromPipelineByPropertyName = $true)]
+        [Parameter(ParameterSetName = 'ActionScriptBlock',ValueFromPipelineByPropertyName = $true)]
         [switch]
         $Durable,
+
+        [Parameter(ParameterSetName = 'Default',ValueFromPipelineByPropertyName = $true)]
         [Parameter(ParameterSetName = 'ActionScriptBlock',ValueFromPipelineByPropertyName = $true)]
         [String]
         $ActionScriptBlock = ("Register-EngineEvent -SourceIdentifier MINION -Forward;`
@@ -48,13 +85,21 @@ Function New-RabbitInterface {
                                     'message' = `$_;`
                                     'interfaceid' = '$InterfaceID';`
                                 })"),
+
+        [Parameter(ParameterSetName = 'Default',ValueFromPipelineByPropertyName = $true)]
         [Parameter(ParameterSetName = 'ActionFile',ValueFromPipelineByPropertyName = $true)]
         [System.IO.FileInfo]
         $ActionFile,
-        [Parameter(ValueFromPipelineByPropertyName = $true)]
+
+        [Parameter(ValueFromPipelineByPropertyName = $true, ParameterSetName = 'Default')]
+        [Parameter(ParameterSetName = 'ActionFile',ValueFromPipelineByPropertyName = $true)]
+        [Parameter(ParameterSetName = 'ActionScriptBlock',ValueFromPipelineByPropertyName = $true)]
         [pscredential]
         $RabbitMQCredential,
-        [Parameter(ValueFromPipelineByPropertyName = $true)]
+
+        [Parameter(ValueFromPipelineByPropertyName = $true, ParameterSetName = 'Default')]
+        [Parameter(ParameterSetName = 'ActionFile',ValueFromPipelineByPropertyName = $true)]
+        [Parameter(ParameterSetName = 'ActionScriptBlock',ValueFromPipelineByPropertyName = $true)]
         [switch]
         $IncludeEnvelope
     )
@@ -73,13 +118,13 @@ Function New-RabbitInterface {
             [PSCustomObject]
             $Parameters
         )
-        $RMQParams  = @{} 
+        $RMQParams  = @{}
 
         switch (($Parameters|Get-Member -MemberType NoteProperty).Name)
         {
         'RabbitMQServer'    { $RMQParams['ComputerName']  = [string]$Parameters.'RabbitMQServer'}
         'InterfaceId'       { $InterfaceId                = [string]$Parameters.'InterfaceId';  }
-        'Interfacename'     { $InterfaceName              = [string]$Parameters.'Interfacename';        }
+        'Interfacename'     { $InterfaceName              = [string]$Parameters.'Interfacename';}
         'PrefetchSize'      { $RMQParams['PrefetchSize']  = [uint32]$Parameters.'PrefetchSize'  }
         'PrefetchCount'     { $RMQParams['PrefetchCount'] = [uint16]$Parameters.'PrefetchCount' }
         'global'            { $RMQParams['global']        = [bool]$Parameters.global            }
